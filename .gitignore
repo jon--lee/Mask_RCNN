@@ -5,6 +5,11 @@ logs/
 results/
 temp/
 test/
+*.json
+*.png
+*.DS_Store
+*.zip
+*.h5
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
