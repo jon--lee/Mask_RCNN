@@ -28,9 +28,9 @@ from mrcnn.model import log
 
 # Directory to save logs and trained model
 MODEL_DIR = os.path.join(ROOT_DIR, "logs")
-MODEL_DIR2 = os.path.join(ROOT_DIR, "logs2")
+MODEL_DIR2 = os.path.join(ROOT_DIR, "logs")
 MODEL_PATH = os.path.join(MODEL_DIR2, "mask_rcnn_grasps.h5")
-IMAGE_DIR = os.path.join(ROOT_DIR, "samples/shapes/dataset/images")
+IMAGE_DIR = os.path.join(ROOT_DIR, "samples/shapes/dataset_val/images")
 
 class GraspsConfig(Config):
     """Configuration for training on the toy shapes dataset.
@@ -75,9 +75,8 @@ model.load_weights(MODEL_PATH, by_name=True)
 class_names =  ['BG', 'scrap', 'tape', 'tube', 'screwdriver']
 
 file_names = next(os.walk(IMAGE_DIR))[2]
-print(file_names)
-
-image = skimage.io.imread(os.path.join(IMAGE_DIR, random.choice(file_names)))
+filepath = os.path.join(IMAGE_DIR, 'rgb_raw_0100.png')
+image = skimage.io.imread(filepath)
 
 
 results = model.detect([image], verbose=1)
