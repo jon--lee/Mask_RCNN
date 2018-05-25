@@ -28,7 +28,7 @@ ap.add_argument('--weight_decay', required=False, type=float, default=0.0001)
 ap.add_argument('--backbone', required=False, type=str, default='resnet101')
 
 args = vars(ap.parse_args())
-
+import IPython
 
 
 # Directory to save logs and trained model
@@ -37,6 +37,7 @@ MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 # Local path to trained weights file
 COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 # Download COCO trained weights from Releases if needed
+IPython.embed()
 if not os.path.exists(COCO_MODEL_PATH):
     utils.download_trained_weights(COCO_MODEL_PATH)
 
