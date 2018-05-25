@@ -171,11 +171,11 @@ class GraspDataset(utils.Dataset):
         
 
 dataset_train = GraspDataset()
-dataset_train.load_grasps('./dataset')
+dataset_train.load_grasps('./dataset_depth')
 dataset_train.prepare()
 
 dataset_val = GraspDataset()
-dataset_val.load_grasps('./dataset_val')
+dataset_val.load_grasps('./dataset_depth_val')
 dataset_val.prepare()
 
 model = modellib.MaskRCNN(mode="training", config=config,

@@ -26,11 +26,13 @@ from mrcnn import visualize
 from mrcnn.model import log
 
 
-# Directory to save logs and trained model
+# # Directory to save logs and trained model
 MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 MODEL_DIR2 = os.path.join(ROOT_DIR, "logs")
 MODEL_PATH = os.path.join(MODEL_DIR2, "mask_rcnn_grasps.h5")
-IMAGE_DIR = os.path.join(ROOT_DIR, "samples/shapes/dataset_val/images")
+IMAGE_DIR = os.path.join(ROOT_DIR, "samples/shapes/dataset/images")
+IMAGE_VAL_DIR = os.path.join(ROOT_DIR, "samples/shapes/dataset_val/images")
+OUTPUT_DIR = './output/'
 
 class GraspsConfig(Config):
     """Configuration for training on the toy shapes dataset.
@@ -67,26 +69,46 @@ class GraspsConfig(Config):
     VALIDATION_STEPS = 5
 
     BATCH_SIZE = 1
-    
+
 config = GraspsConfig()
 model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 model.load_weights(MODEL_PATH, by_name=True)
 
+
 class_names =  ['BG', 'scrap', 'tape', 'tube', 'screwdriver']
+filenames = sorted([filename for filename in list(os.walk(IMAGE_DIR))[0][2] if filename.endswith('.png')])
+filenames_val = sorted([filename for filename in list(os.walk(IMAGE_VAL_DIR))[0][2] if filename.endswith('.png')])
 
-file_names = next(os.walk(IMAGE_DIR))[2]
-filepath = os.path.join(IMAGE_DIR, 'rgb_raw_0100.png')
-image = skimage.io.imread(filepath)
+OUTPUT_VAL = os.path.join(OUTPUT_DIR, 'val/')
+OUTPUT_TRAIN = os.path.join(OUTPUT_DIR, 'train/')
+
+if not os.path.exists(OUTPUT_VAL):
+    os.makedirs(OUTPUT_VAL)
+if not os.path.exists(OUTPUT_TRAIN):
+    os.makedirs(OUTPUT_TRAIN)
+
+def eval(names, src_dir, dst_dir):
+    for filename in names:
+        srcpath = os.path.join(src_dir, filename)
+        dstpath = os.path.join(dst_dir, filename)
+
+        image = skimage.io.imread(srcpath)
+        results = model.detect([image], verbose=1)
+        r = results[0]
+        figsize=(16, 16)
+        _, ax = plt.subplots(1, figsize=figsize)
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
+                                    class_names, r['scores'], ax=ax)
+        plt.savefig(dstpath)
+        plt.close()
+        plt.clf()
+        plt.cla()
 
 
-results = model.detect([image], verbose=1)
+eval(filenames[:5], IMAGE_DIR, OUTPUT_TRAIN)
+eval(filenames[-5:], IMAGE_DIR, OUTPUT_TRAIN)
+eval(filenames_val[:5], IMAGE_VAL_DIR, OUTPUT_VAL)
+eval(filenames_val[-5:], IMAGE_VAL_DIR, OUTPUT_VAL)
 
-
-# Visualize results
-r = results[0]
-figsize=(16, 16)
-_, ax = plt.subplots(1, figsize=figsize)
-visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
-                            class_names, r['scores'], ax=ax)
-plt.savefig('test.png')
+exit()
 
