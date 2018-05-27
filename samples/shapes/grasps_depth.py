@@ -37,7 +37,6 @@ MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 # Local path to trained weights file
 COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 # Download COCO trained weights from Releases if needed
-IPython.embed()
 if not os.path.exists(COCO_MODEL_PATH):
     utils.download_trained_weights(COCO_MODEL_PATH)
 
@@ -140,6 +139,7 @@ class GraspDataset(utils.Dataset):
             polygons = [r['points'] for r in anno['shapes']]
             label_ids = [key_map[r['label']] for r in anno['shapes']]
             image = skimage.io.imread(img_path)
+            image = skimage.color.grey2rgb(image)
             height, width = image.shape[:2]
                     
             self.add_image(
