@@ -1,0 +1,48 @@
+import matplotlib
+matplotlib.use('Agg')
+import os
+import sys
+import random
+import math
+import re
+import time
+import numpy as np
+import cv2
+import skimage
+import json
+import matplotlib
+import matplotlib.pyplot as plt
+import IPython
+from eval_rgb import run_eval
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath("../../")
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)  # To find local version of the library
+from mrcnn.config import Config
+from mrcnn import utils
+import mrcnn.model as modellib
+from mrcnn import visualize
+from mrcnn.model import log
+
+
+# # Directory to save logs and trained model
+model_dir = os.path.join(ROOT_DIR, "logs")
+model_path = os.path.join(MODEL_DIR, "grasps_rgb/mask_rcnn_grasps_0029.h5")
+dataset_dir = os.path.join(ROOT_DIR, "samples/shapes/dataset_combined")
+dataset_val_dir = os.path.join(ROOT_DIR, "samples/shapes/dataset_combined_val")
+
+image_dir = os.path.join(dataset_dir, "images/")
+image_val_dir = os.path.join(dataset_val_dir, "images/")
+anno_dir = os.path.join(dataset_dir, "annotations/")
+anno_val_dir = os.path.join(dataset_val_dir, "annotations/")
+
+OUTPUT_DIR = './output/output_combined/'
+MASKS_DIR = './output/output_combined_masks/'
+
+
+if __name__ == '__main__':
+    run_eval(model_dir, model_path, image_dir, image_val_dir, 
+                output_dir, masks_dir, anno_dir, anno_val_dir)
+

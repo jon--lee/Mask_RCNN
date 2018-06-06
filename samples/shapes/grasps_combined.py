@@ -28,7 +28,7 @@ ap.add_argument('--weight_decay', required=False, type=float, default=0.0001)
 ap.add_argument('--backbone', required=False, type=str, default='resnet101')
 
 args = vars(ap.parse_args())
-
+import IPython
 
 
 # Directory to save logs and trained model
@@ -128,7 +128,7 @@ class GraspDataset(utils.Dataset):
         
         anno_filenames = sorted([fn for fn in os.listdir(annotations_dir) if fn.endswith('.json')])
         images_filenames = sorted([fn for fn in os.listdir(images_dir) if fn.endswith('.png')])
-        
+                
         for i, (anno_name, img_name) in enumerate(zip(anno_filenames, images_filenames)):
             anno_path = os.path.join(annotations_dir, anno_name)
             img_path = os.path.join(images_dir, img_name)
@@ -139,6 +139,7 @@ class GraspDataset(utils.Dataset):
             polygons = [r['points'] for r in anno['shapes']]
             label_ids = [key_map[r['label']] for r in anno['shapes']]
             image = skimage.io.imread(img_path)
+            image = skimage.color.grey2rgb(image)
             height, width = image.shape[:2]
                     
             self.add_image(
@@ -171,11 +172,11 @@ class GraspDataset(utils.Dataset):
         
 
 dataset_train = GraspDataset()
-dataset_train.load_grasps('./dataset')
+dataset_train.load_grasps('./dataset_combined')
 dataset_train.prepare()
 
 dataset_val = GraspDataset()
-dataset_val.load_grasps('./dataset_val')
+dataset_val.load_grasps('./dataset_combined_val')
 dataset_val.prepare()
 
 model = modellib.MaskRCNN(mode="training", config=config,
@@ -196,5 +197,5 @@ model.train(dataset_train, dataset_val,
             layers="all")
 
 
-model_path = os.path.join(MODEL_DIR, "mask_rcnn_grasps.h5")
+model_path = os.path.join(MODEL_DIR, "mask_rcnn_grasps_combined.h5")
 model.keras_model.save_weights(model_path)

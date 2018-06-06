@@ -11,6 +11,8 @@ test/
 *.zip
 *.h5
 *.swp
+cocoapi
+samples/shapes/output
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
