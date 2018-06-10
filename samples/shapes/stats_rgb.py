@@ -38,22 +38,23 @@ def encode_gt():
         'categories': [
             {'name': 'scrap',
              'id': key_map['scrap'],
-             'supercategory': 'object'},
+             'supercategory': 'scrap'},
              {'name': 'tape',
              'id': key_map['tape'],
-             'supercategory': 'object'},
+             'supercategory': 'tape'},
              {'name': 'tube',
              'id': key_map['tube'],
-             'supercategory': 'object'},
+             'supercategory': 'tube'},
              {'name': 'screwdriver',
              'id': key_map['screwdriver'],
-             'supercategory': 'object'}
+             'supercategory': 'screwdriver'}
         ]
     }
 
     filenames = sorted([d for d in os.listdir(results_gt_dir) if d.endswith('pkl')])
+    print len(filenames)
 
-    for filename in filenames:
+    for i, filename in enumerate(filenames):
         filepath = os.path.join(results_gt_dir, filename)
         f = open(filepath, 'rb')
         results = pickle.load(f)
@@ -66,18 +67,17 @@ def encode_gt():
         height, width = seg.shape
         image_name = result['image_name']
         im_anno = {
-            'image_id': image_id,
+            'id': image_id,
             'width': width,
             'height': height,
-            'file_name': image_name
         }
 
         gt_annos['images'].append(im_anno)
 
-        for i, result in enumerate(results):
+        for j, result in enumerate(results):
             bin_mask = result['segmentation'].astype(np.uint8)
             category_id = result['category_id']
-            instance_id = i * 100 + (i + 1)
+            instance_id = i * 100 + (j + 1)
 
             def bbox2(img):
                 rows = np.any(img, axis=1)
@@ -100,23 +100,94 @@ def encode_gt():
                 "bbox" : [x, y, w, h],
                 "iscrowd" : 0,
             }
-
             gt_annos['annotations'].append(instance_anno)
 
 
     anno_path = os.path.join(results_gt_dir, 'annos_gt.json')
     json.dump(gt_annos, open(anno_path, 'w+'))
     print "successfully wrote GT annotations to", anno_path
+    return gt_annos
 
 
 
 
-
-def encode_pred(mask_dir):
+def encode_pred():
     annos = []
+
+    filenames = sorted([d for d in os.listdir(results_pred_dir) if d.endswith('pkl')])
+    print len(filenames)
+
+    for i, filename in enumerate(filenames):
+        filepath = os.path.join(results_pred_dir, filename)
+        f = open(filepath, 'rb')
+        results = pickle.load(f)
+        f.close()
+
+        for j, result in enumerate(results):
+
+            bin_mask = result['segmentation'].astype(np.uint8)
+            image_id = result['image_id']
+            category_id = result['category_id']
+            score = result['score']
+
+            encode_mask = mask.encode(np.asfortranarray(bin_mask))
+            encode_mask['counts'] = encode_mask['counts'].decode('ascii')
+
+            anno = {
+                'image_id': int(image_id),
+                'category_id': int(category_id),
+                'score': float(score),
+                'segmentation': encode_mask 
+            }  
+            annos.append(anno)
+
+
+    anno_path = os.path.join(results_pred_dir, 'annos_pred.json')
+    json.dump(annos, open(anno_path, 'w+'))
+    print "successfully wrote prediction annotations to", anno_path
+    return annos
+
+
+def compute_coco_metrics():
+    """Given paths to two directories, one containing a COCO ground truth annotations
+    file and the other a path to a COCO prediction annotations file, compute the COCO
+    evaluation metrics on the predictions.
+    Because the COCO API is weird and prints out summary values, we need this
+    terrible hack to capture them from stdout.
+    https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a-python-function-call
+    """
+
+    gt_path = os.path.join(results_gt_dir, 'annos_gt.json')
+    pred_path = os.path.join(results_pred_dir, 'annos_pred.json')
+
+    import io
+    # from contextlib import redirect_stdout
+
+    pred_annos = json.load(open(pred_path, 'r'))
+    gt_annos = json.load(open(gt_path, 'r'))
+
+
+    cocoGt = COCO(gt_path)
+    cocoDt = cocoGt.loadRes(pred_path)
+
+    cocoEval = COCOeval(cocoGt, cocoDt, 'segm')
+
+    cocoEval.params.imgIds = cocoGt.getImgIds()
+    cocoEval.params.useCats = False
+
+    cocoEval.evaluate()
+    cocoEval.accumulate()
+    cocoEval.summarize()
+    # f = io.StringIO()
+    # with redirect_stdout(f):
+    #     cocoEval.summarize()
+    # out = f.getvalue()
+    # print(out)
 
 
 
 
 if __name__ == '__main__':
     encode_gt()
+    encode_pred()
+    compute_coco_metrics()
