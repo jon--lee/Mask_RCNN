@@ -30,8 +30,8 @@ from mrcnn.model import log
 # # Directory to save logs and trained model
 model_dir = os.path.join(ROOT_DIR, "logs")
 model_path = os.path.join(MODEL_DIR, "grasps_rgb/mask_rcnn_grasps_0029.h5")
-dataset_dir = os.path.join(ROOT_DIR, "samples/shapes/dataset_combined")
-dataset_val_dir = os.path.join(ROOT_DIR, "samples/shapes/dataset_combined_val")
+dataset_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_combined"
+dataset_val_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_combined_val"
 
 image_dir = os.path.join(dataset_dir, "images/")
 image_val_dir = os.path.join(dataset_val_dir, "images/")

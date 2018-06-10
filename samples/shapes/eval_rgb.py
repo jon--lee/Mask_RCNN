@@ -13,6 +13,7 @@ import json
 import matplotlib
 import matplotlib.pyplot as plt
 import IPython
+import pickle
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -25,12 +26,27 @@ import mrcnn.model as modellib
 from mrcnn import visualize
 from mrcnn.model import log
 
+key_map = {
+    'scrap': 1,
+    'tape': 2,
+    'tube': 3,
+    'screwdriver': 4
+}
+
+key_map_reverse = {
+    1: 'scrap',
+    2: 'tape',
+    3: 'tube',
+    4: 'screwdriver',
+}
+
+
 
 # # Directory to save logs and trained model
 model_dir = os.path.join(ROOT_DIR, "logs")
 model_path = os.path.join(model_dir, "grasps_rgb/mask_rcnn_grasps_0029.h5")
-dataset_dir = os.path.join(ROOT_DIR, "samples/shapes/dataset")
-dataset_val_dir = os.path.join(ROOT_DIR, "samples/shapes/dataset_val")
+dataset_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset"
+dataset_val_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_val"
 
 image_dir = os.path.join(dataset_dir, "images/")
 image_val_dir = os.path.join(dataset_val_dir, "images/")
@@ -38,28 +54,87 @@ anno_dir = os.path.join(dataset_dir, "annotations/")
 anno_val_dir = os.path.join(dataset_val_dir, "annotations/")
 
 output_dir = './output/output_rgb/'
-masks_dir = './output/output_rgb_masks/'
+output_results_dir = './output/output_rgb_results/'
 
 
-def load_masks(anno_path, image_shape):
+def load_gt_masks(image_name, image_id, anno_path, image_shape):
     f = open(anno_path, 'r')
     anno = json.load(f)
     f.close()
 
-    polygons = [r['points'] for r in anno['shapes']]
     height, width = image_shape[:2]
-    masks = np.zeros((len(polygons), height, width))
-    
-    for i, p in enumerate(polygons):
+    polygons = [r['points'] for r in anno['shapes']]
+    label_ids = [key_map[r['label']] for r in anno['shapes']]
+
+    gt_annos = []
+
+    for i, (p, label_id) in enumerate(zip(polygons, label_ids)):
         p = np.array(p)
         all_y = p[:, 1]
         all_x = p[:, 0]
         rr, cc = skimage.draw.polygon(all_y, all_x)
-        masks[i, rr, cc] = 1
 
-    masks = masks.astype(np.bool)
+        gt_mask = np.zeros((height, width))
+        gt_mask[rr, cc] = 1
+        gt_mask = gt_mask.astype(bool)
 
-    return masks
+        gt_anno = {
+            'image_name': image_name,
+            'image_id': image_id,
+            'category_id': label_id,
+            'segmentation': gt_mask.copy(),
+        }
+        gt_annos.append(gt_anno)
+
+    return gt_annos
+
+
+def load_pred_masks(image_name, image_id, detection_results):
+    r = detection_results[0]
+    masks = r['masks'].copy()
+    shape = masks.shape
+    class_ids = r['class_ids']
+    scores = r['scores']
+    
+    pred_annos = []
+
+    for i in range(shape[2]):
+        pred_mask = masks[:, :, i].astype(np.bool)
+        class_id = class_ids[i]
+
+        pred_anno = {
+            'image_name': image_name,
+            'image_id': image_id,
+            'category_id': class_id,
+            'segmentation': pred_mask.copy(),
+            'score': scores[i]
+        }
+        pred_annos.append(pred_anno)
+
+    return pred_annos
+
+
+def save_results(filename, pred_results, gt_results):
+    assert filename.endswith(".pkl")
+    pred_dir = os.path.join(output_results_dir, 'pred')
+    gt_dir = os.path.join(output_results_dir, 'gt')
+
+    if not os.path.exists(pred_dir):
+        os.makedirs(pred_dir)
+    if not os.path.exists(gt_dir):
+        os.makedirs(gt_dir)
+
+    pred_path = os.path.join(pred_dir, filename)
+    gt_path = os.path.join(gt_dir, filename)
+
+    pred_file = open(pred_path, 'wb')
+    pickle.dump(pred_results, pred_file, protocol=2)
+    pred_file.close()
+    gt_file = open(gt_path, 'wb')
+    pickle.dump(gt_results, gt_file, protocol=2)
+    gt_file.close()
+
+
 
 def run_eval(model_dir, model_path, image_dir, image_val_dir, 
             output_dir, masks_dir, anno_dir, anno_val_dir):
@@ -114,17 +189,11 @@ def run_eval(model_dir, model_path, image_dir, image_val_dir,
 
     output_val = os.path.join(output_dir, 'val/')
     output_train = os.path.join(output_dir, 'train/')
-    masks_pred = os.path.join(masks_dir, 'pred/')
-    masks_gt = os.path.join(masks_dir, 'gt/')
 
     if not os.path.exists(output_val):
     	os.makedirs(output_val)
     if not os.path.exists(output_train):
     	os.makedirs(output_train)
-    if not os.path.exists(masks_pred):
-        os.makedirs(masks_pred)
-    if not os.path.exists(masks_gt):
-        os.makedirs(masks_gt)
 
     def eval(names, src_dir, dst_dir, anno_dir=None):
         for filename in names:
@@ -134,36 +203,27 @@ def run_eval(model_dir, model_path, image_dir, image_val_dir,
             print(srcpath)
             print(dstpath)
 
-
             image = skimage.io.imread(srcpath)
             image = skimage.color.grey2rgb(image)
             results = model.detect([image], verbose=1)
+
             r = results[0]
             figsize=(16, 16)
             _, ax = plt.subplots(1, figsize=figsize)
             visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
                                         class_names, r['scores'], ax=ax)
 
-            if not anno_dir is None:
-                masks = r['masks'].copy()
-                shape = masks.shape
-                pred_masks = np.zeros((shape[2], shape[0], shape[1]))
-                for i in range(shape[2]):
-                    pred_masks[i, :, :] = masks[:, :, i]
 
+            if not anno_dir is None:
+                image_id = int(filename[:-4][-4:])
                 anno_filename = filename[:-4] + '.json'
                 anno_path = os.path.join(anno_dir, anno_filename)
-                gt_masks = load_masks(anno_path, image.shape)
 
-                mask_filename = filename[:-4] + '.npy'
-                pred_filepath = os.path.join(masks_pred, mask_filename)
-                gt_filepath = os.path.join(masks_gt, mask_filename)
+                pred_results = load_pred_masks(filename, image_id, results)
+                gt_results = load_gt_masks(filename, image_id, anno_path, image.shape)
+                results_filename = filename[:-4] + '.pkl'
 
-                np.save(pred_filepath, pred_masks)
-                np.save(gt_filepath, gt_masks)
-
-
-
+                save_results(results_filename, pred_results, gt_results)
 
             plt.savefig(dstpath)
             plt.close()
@@ -180,4 +240,4 @@ def run_eval(model_dir, model_path, image_dir, image_val_dir,
 
 if __name__ == '__main__':
     run_eval(model_dir, model_path, image_dir, image_val_dir, 
-                output_dir, masks_dir, anno_dir, anno_val_dir)
+                output_dir, output_results_dir, anno_dir, anno_val_dir)
