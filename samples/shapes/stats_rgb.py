@@ -31,7 +31,7 @@ key_map_reverse = {
 }
 
 
-def encode_gt():
+def encode_gt(results_gt_dir):
     gt_annos = {
         'images': [],
         'annotations': [],
@@ -111,7 +111,7 @@ def encode_gt():
 
 
 
-def encode_pred():
+def encode_pred(results_pred_dir):
     annos = []
 
     filenames = sorted([d for d in os.listdir(results_pred_dir) if d.endswith('pkl')])
@@ -148,7 +148,7 @@ def encode_pred():
     return annos
 
 
-def compute_coco_metrics():
+def compute_coco_metrics(results_gt_dir, results_pred_dir):
     """Given paths to two directories, one containing a COCO ground truth annotations
     file and the other a path to a COCO prediction annotations file, compute the COCO
     evaluation metrics on the predictions.
@@ -188,6 +188,6 @@ def compute_coco_metrics():
 
 
 if __name__ == '__main__':
-    encode_gt()
-    encode_pred()
-    compute_coco_metrics()
+    encode_gt(results_gt_dir)
+    encode_pred(results_pred_dir)
+    compute_coco_metrics(results_gt_dir, results_pred_dir)

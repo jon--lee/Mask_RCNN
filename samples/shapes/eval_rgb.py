@@ -114,7 +114,7 @@ def load_pred_masks(image_name, image_id, detection_results):
     return pred_annos
 
 
-def save_results(filename, pred_results, gt_results):
+def save_results(filename, output_results_dir, pred_results, gt_results):
     assert filename.endswith(".pkl")
     pred_dir = os.path.join(output_results_dir, 'pred')
     gt_dir = os.path.join(output_results_dir, 'gt')
@@ -127,6 +127,9 @@ def save_results(filename, pred_results, gt_results):
     pred_path = os.path.join(pred_dir, filename)
     gt_path = os.path.join(gt_dir, filename)
 
+    print("Saving pred output results to: " + pred_path)
+    print("Saving gt output results to: " + gt_path)
+
     pred_file = open(pred_path, 'wb')
     pickle.dump(pred_results, pred_file, protocol=2)
     pred_file.close()
@@ -137,7 +140,7 @@ def save_results(filename, pred_results, gt_results):
 
 
 def run_eval(model_dir, model_path, image_dir, image_val_dir, 
-            output_dir, masks_dir, anno_dir, anno_val_dir):
+            output_dir, output_results_dir, anno_dir, anno_val_dir):
 
     class GraspsConfig(Config):
         """Configuration for training on the toy shapes dataset.
@@ -200,8 +203,8 @@ def run_eval(model_dir, model_path, image_dir, image_val_dir,
             srcpath = os.path.join(src_dir, filename)
             dstpath = os.path.join(dst_dir, filename)
 
-            print(srcpath)
-            print(dstpath)
+            print("Loading image from: " + srcpath)
+            print("Saving image to: " + dstpath)
 
             image = skimage.io.imread(srcpath)
             image = skimage.color.grey2rgb(image)
@@ -213,6 +216,11 @@ def run_eval(model_dir, model_path, image_dir, image_val_dir,
             visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
                                         class_names, r['scores'], ax=ax)
 
+            plt.savefig(dstpath)
+            plt.close()
+            plt.clf()
+            plt.cla()
+
 
             if not anno_dir is None:
                 image_id = int(filename[:-4][-4:])
@@ -223,12 +231,8 @@ def run_eval(model_dir, model_path, image_dir, image_val_dir,
                 gt_results = load_gt_masks(filename, image_id, anno_path, image.shape)
                 results_filename = filename[:-4] + '.pkl'
 
-                save_results(results_filename, pred_results, gt_results)
+                save_results(results_filename, output_results_dir, pred_results, gt_results)
 
-            plt.savefig(dstpath)
-            plt.close()
-            plt.clf()
-            plt.cla()
 
 
     # eval(filenames[:10], image_dir, output_train)
