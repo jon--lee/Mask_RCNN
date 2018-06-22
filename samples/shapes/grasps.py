@@ -30,9 +30,9 @@ ap.add_argument('--backbone', required=False, type=str, default='resnet101')
 args = vars(ap.parse_args())
 
 
-
 # Directory to save logs and trained model
-MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+NFS = '/nfs/diskstation/jonathan/mask'
+MODEL_DIR = os.path.join(NFS, "logs")
 
 # Local path to trained weights file
 COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
@@ -171,11 +171,11 @@ class GraspDataset(utils.Dataset):
         
 
 dataset_train = GraspDataset()
-dataset_train.load_grasps('./dataset')
+dataset_train.load_grasps('/nfs/diskstation/jonathan/mask/dataset/dataset')
 dataset_train.prepare()
 
 dataset_val = GraspDataset()
-dataset_val.load_grasps('./dataset_val')
+dataset_val.load_grasps('/nfs/diskstation/jonathan/mask/dataset/dataset_val')
 dataset_val.prepare()
 
 model = modellib.MaskRCNN(mode="training", config=config,

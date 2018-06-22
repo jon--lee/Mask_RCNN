@@ -43,7 +43,7 @@ key_map_reverse = {
 
 
 # # Directory to save logs and trained model
-model_dir = os.path.join(ROOT_DIR, "logs")
+model_dir = '/nfs/diskstation/jonathan/mask/logs/'
 model_path = os.path.join(model_dir, "grasps_rgb/mask_rcnn_grasps_0029.h5")
 dataset_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset"
 dataset_val_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_val"

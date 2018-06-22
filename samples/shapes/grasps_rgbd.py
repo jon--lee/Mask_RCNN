@@ -21,14 +21,14 @@ from mrcnn import utils
 import mrcnn.model as modellib
 from mrcnn import visualize
 from mrcnn.model import log
-
+import IPython
 import argparse
 ap = argparse.ArgumentParser()
 ap.add_argument('--weight_decay', required=False, type=float, default=0.0001)
 ap.add_argument('--backbone', required=False, type=str, default='resnet101')
 
 args = vars(ap.parse_args())
-import IPython
+
 
 
 # Directory to save logs and trained model
@@ -113,7 +113,7 @@ key_map_reverse = {
 
 class GraspDataset(utils.Dataset):
 
-    def load_grasps(self, dataset_dir):
+    def load_grasps(self, dataset_dir, dataset_depth_dir, dataset_save_dir):
         """Load a subset of the Balloon dataset.
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
@@ -126,13 +126,21 @@ class GraspDataset(utils.Dataset):
 
         annotations_dir = os.path.join(dataset_dir, 'annotations')
         images_dir = os.path.join(dataset_dir, 'images')
+        images_depth_dir = os.path.join(dataset_depth_dir, 'images')
+        images_save_dir = os.path.join(dataset_save_dir, 'images')
         
         anno_filenames = sorted([fn for fn in os.listdir(annotations_dir) if fn.endswith('.json')])
         images_filenames = sorted([fn for fn in os.listdir(images_dir) if fn.endswith('.png')])
-                
+
         for i, (anno_name, img_name) in enumerate(zip(anno_filenames, images_filenames)):
             anno_path = os.path.join(annotations_dir, anno_name)
             img_path = os.path.join(images_dir, img_name)
+            img_depth_path = os.path.join(images_depth_dir, 'grey' + img_name[3:])
+            img_save_path = os.path.join(images_save_dir, img_name)
+            if not os.path.exists(images_save_dir):
+                os.makedirs(images_save_dir)
+
+
             f = open(anno_path)
             anno = json.load(f)
             f.close()
@@ -140,13 +148,21 @@ class GraspDataset(utils.Dataset):
             polygons = [r['points'] for r in anno['shapes']]
             label_ids = [key_map[r['label']] for r in anno['shapes']]
             image = skimage.io.imread(img_path)
-            image = skimage.color.grey2rgb(image)
-            height, width = image.shape[:2]
-                    
+            image_depth = skimage.io.imread(img_depth_path)
+
+            zeros = np.zeros((image.shape[0], image.shape[1], 4))
+            zeros[:, :, :3] = image
+            zeros[:, :, 3] = image_depth
+            image = zeros
+
+            skimage.io.imsave(img_save_path, image / 255.0)
+
+
+            height, width = image.shape[:2]        
             self.add_image(
                 'grasp',
                 image_id=i,  # use file name as a unique image id
-                path=img_path,
+                path=img_save_path,
                 width=width, height=height,
                 polygons=polygons, label_ids=label_ids)
         
@@ -173,11 +189,17 @@ class GraspDataset(utils.Dataset):
         
 
 dataset_train = GraspDataset()
-dataset_train.load_grasps('/nfs/diskstation/jonathan/mask/dataset/dataset_combined')
+rgb_dir = '/nfs/diskstation/jonathan/mask/dataset/dataset/'
+depth_dir = '/nfs/diskstation/jonathan/mask/dataset/dataset_depth/'
+save_dir = '/nfs/diskstation/jonathan/mask/dataset/dataset_rgbd/'
+dataset_train.load_grasps(rgb_dir, depth_dir, save_dir)
 dataset_train.prepare()
 
 dataset_val = GraspDataset()
-dataset_val.load_grasps('/nfs/diskstation/jonathan/mask/dataset/dataset_combined_val')
+rgb_dir = '/nfs/diskstation/jonathan/mask/dataset/dataset_val/'
+depth_dir = '/nfs/diskstation/jonathan/mask/dataset/dataset_depth_val/'
+save_dir = '/nfs/diskstation/jonathan/mask/dataset/dataset_rgbd_val/'
+dataset_val.load_grasps(rgb_dir, depth_dir, save_dir)
 dataset_val.prepare()
 
 model = modellib.MaskRCNN(mode="training", config=config,
@@ -198,5 +220,5 @@ model.train(dataset_train, dataset_val,
             layers="all")
 
 
-model_path = os.path.join(MODEL_DIR, "mask_rcnn_grasps_combined.h5")
+model_path = os.path.join(MODEL_DIR, "mask_rcnn_grasps.h5")
 model.keras_model.save_weights(model_path)

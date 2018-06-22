@@ -29,20 +29,25 @@ from mrcnn.model import log
 
 # # Directory to save logs and trained model
 model_dir = '/nfs/diskstation/jonathan/mask/logs/'
-model_path = os.path.join(model_dir, "grasps_combined/mask_rcnn_grasps_0029.h5")
-dataset_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_combined"
-dataset_val_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_combined_val"
+model_path = os.path.join(model_dir, "grasps_rgbd/mask_rcnn_grasps_0029.h5")
+dataset_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_rgbd"
+dataset_val_dir = "/nfs/diskstation/jonathan/mask/dataset/dataset_rgbd_val"
+
 
 image_dir = os.path.join(dataset_dir, "images/")
 image_val_dir = os.path.join(dataset_val_dir, "images/")
+
 anno_dir = os.path.join(dataset_dir, "annotations/")
 anno_val_dir = os.path.join(dataset_val_dir, "annotations/")
 
-output_dir = './output/output_combined/'
-output_results_dir = './output/output_combined_results/'
+output_dir = './output/output_rgbd/'
+output_results_dir = './output/output_rgbd_results/'
+
+
 
 
 if __name__ == '__main__':
     run_eval(model_dir, model_path, image_dir, image_val_dir, 
                 output_dir, output_results_dir, anno_dir, anno_val_dir)
+
 
